@@ -12,6 +12,8 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { BusinessAdminForm } from "./BusinessAdminForm";
 import { FamilyStatusBadge } from "@/components/ui/FamilyStatusBadge";
 import { FAMILY_ROLE_LABEL, type FamilyRole } from "@/config/roles";
+import { adminApproveBusiness } from "@/actions/businesses";
+import { CheckCircle2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +111,30 @@ export default async function EmprendimientoAdminPage({
           </div>
         )}
       </section>
+
+      {b.status === "pending" ? (
+        <section className="border-2 border-[var(--color-accent)] bg-[var(--color-accent-soft)] p-4 md:p-5 mb-8">
+          <p className="eyebrow mb-2" style={{ color: "var(--color-accent)" }}>
+            Pendiente de validación
+          </p>
+          <p className="text-sm text-[var(--color-ink-soft)] leading-relaxed mb-4">
+            Este emprendimiento todavía no está publicado. Si confiás en el
+            dueño y querés saltearte el flujo de validación entre pares,
+            aprobalo manualmente. Le va a llegar el mail con la URL pública y
+            su link de edición.
+          </p>
+          <form action={adminApproveBusiness}>
+            <input type="hidden" name="id" value={b.id} />
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 h-11 px-5 bg-[var(--color-accent)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <CheckCircle2 size={16} />
+              Aprobar y publicar
+            </button>
+          </form>
+        </section>
+      ) : null}
 
       <BusinessAdminForm business={b} categories={cats} />
 

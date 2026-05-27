@@ -4,10 +4,14 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { businesses } from "@/db/schema";
+import { accessTokens, businesses, families, validationRequests } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
 import { logEvent } from "@/lib/log";
 import { slugify } from "@/lib/slugify";
+import { sendMail, templates } from "@/lib/mail";
+import { inHours, newToken } from "@/lib/tokens";
+import { appUrl } from "@/lib/env";
+import { emailLocalPart } from "@/lib/text";
 
 const STATUS = ["pending", "active", "paused", "rejected"] as const;
 
@@ -162,6 +166,82 @@ export async function setBusinessStatus(fd: FormData) {
     metadata: { from: prev.status },
   });
   revalidatePath("/admin/emprendimientos");
+}
+
+export async function adminApproveBusiness(fd: FormData) {
+  const admin = await requireAdmin();
+  const id = String(fd.get("id") ?? "");
+  if (!id) return;
+
+  const [biz] = await db.select().from(businesses).where(eq(businesses.id, id)).limit(1);
+  if (!biz) return;
+  if (biz.status === "active") {
+    revalidatePath(`/admin/emprendimientos/${id}`);
+    return;
+  }
+
+  const editToken = newToken(24);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(businesses)
+      .set({ status: "active", approvedAt: biz.approvedAt ?? new Date() })
+      .where(eq(businesses.id, id));
+
+    // Expira los pedidos pendientes para que los links viejos no
+    // confundan a los validadores ahora que ya está aprobado.
+    await tx
+      .update(validationRequests)
+      .set({ status: "expired" })
+      .where(
+        and(
+          eq(validationRequests.businessId, id),
+          eq(validationRequests.status, "pending"),
+        ),
+      );
+
+    await tx.insert(accessTokens).values({
+      token: editToken,
+      email: biz.ownerEmail,
+      purpose: "edit_business",
+      targetId: id,
+      expiresAt: inHours(24 * 30),
+    });
+  });
+
+  await logEvent({
+    type: "business.admin_approved",
+    actorEmail: admin.email,
+    entityType: "businesses",
+    entityId: id,
+    metadata: { from: biz.status },
+  });
+
+  const ownerName = biz.ownerFamilyId
+    ? (
+        await db
+          .select({ displayName: families.displayName })
+          .from(families)
+          .where(eq(families.id, biz.ownerFamilyId))
+          .limit(1)
+      )[0]?.displayName ?? emailLocalPart(biz.ownerEmail)
+    : emailLocalPart(biz.ownerEmail);
+
+  const publicUrl = `${appUrl()}/e/${biz.slug}`;
+  const editUrl = `${appUrl()}/editar/${editToken}`;
+  const msg = templates.applicantApproved({
+    applicantName: ownerName,
+    businessName: biz.name,
+    publicUrl,
+    editUrl,
+  });
+  await sendMail({ ...msg, to: biz.ownerEmail });
+
+  revalidatePath("/admin/emprendimientos");
+  revalidatePath(`/admin/emprendimientos/${id}`);
+  revalidatePath(`/e/${biz.slug}`);
+  revalidatePath("/");
+  revalidatePath("/explorar");
 }
 
 export async function deleteBusinessAdmin(fd: FormData) {
