@@ -298,8 +298,7 @@ export default async function FichaPage({
                 Dejá una buena vibra.
               </h2>
               <p className="text-[var(--color-muted)] text-[15px] leading-relaxed">
-                Si te gusta lo que hacen, marcalo. Sin estrellas, sin reseñas.
-                Solo reconocer.
+                Si te gusta lo que hacen, reconocelo y compartilo.
               </p>
             </div>
             <div className="lg:col-span-7 lg:border-l lg:border-[var(--color-border)] lg:pl-12">

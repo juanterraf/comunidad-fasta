@@ -57,7 +57,42 @@ export async function requestEditLink(_prev: unknown, fd: FormData) {
   return { ok: true as const };
 }
 
-export async function consumeEditToken(token: string) {
+export type TokenPreview = {
+  status: "valid" | "used" | "expired" | "not_found";
+  businessName?: string;
+  email?: string;
+};
+
+export async function inspectEditToken(token: string): Promise<TokenPreview> {
+  const [t] = await db
+    .select({
+      id: accessTokens.id,
+      email: accessTokens.email,
+      purpose: accessTokens.purpose,
+      targetId: accessTokens.targetId,
+      expiresAt: accessTokens.expiresAt,
+      usedAt: accessTokens.usedAt,
+      businessName: businesses.name,
+    })
+    .from(accessTokens)
+    .leftJoin(businesses, eq(accessTokens.targetId, businesses.id))
+    .where(eq(accessTokens.token, token))
+    .limit(1);
+
+  if (!t || t.purpose !== "edit_business" || !t.targetId) return { status: "not_found" };
+  if (t.usedAt) return { status: "used" };
+  if (t.expiresAt.getTime() <= Date.now()) return { status: "expired" };
+  return {
+    status: "valid",
+    businessName: t.businessName ?? undefined,
+    email: t.email,
+  };
+}
+
+export async function consumeEditToken(fd: FormData) {
+  const token = String(fd.get("token") ?? "");
+  if (!token) redirect("/editar");
+
   const now = new Date();
   const [t] = await db
     .select()
@@ -71,7 +106,10 @@ export async function consumeEditToken(token: string) {
       ),
     )
     .limit(1);
-  if (!t || !t.targetId) return { ok: false as const };
+  if (!t || !t.targetId) {
+    // El GET a /editar/[token] renderiza el motivo (used/expired/not_found).
+    redirect(`/editar/${token}`);
+  }
 
   await db
     .update(accessTokens)
@@ -90,7 +128,7 @@ export async function consumeEditToken(token: string) {
     entityType: "businesses",
     entityId: t.targetId,
   });
-  return { ok: true as const };
+  redirect("/mi-emprendimiento");
 }
 
 export async function logoutOwner() {
