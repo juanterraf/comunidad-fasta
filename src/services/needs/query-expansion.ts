@@ -1,4 +1,5 @@
 import { SYNONYMS, STOPWORDS, type SynonymEntry } from "@/config/community-search";
+import { stripDiacritics } from "@/lib/text";
 
 export type ExpandedQuery = {
   original: string;
@@ -11,10 +12,7 @@ export type ExpandedQuery = {
 };
 
 export function normalizeText(input: string): string {
-  return input
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+  return stripDiacritics(input.toLowerCase())
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();

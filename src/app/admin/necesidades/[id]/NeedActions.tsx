@@ -3,19 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateNeedNotes, updateNeedStatus } from "@/actions/needs";
+import { NEED_STATUSES, NEED_STATUS_LABEL, type NeedStatus } from "@/config/needs";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-
-type Status = "new" | "reviewed" | "resolved" | "discarded" | "spam" | "featured";
-
-const STATUSES: { value: Status; label: string }[] = [
-  { value: "new", label: "Nueva" },
-  { value: "reviewed", label: "Revisada" },
-  { value: "resolved", label: "Resuelta" },
-  { value: "featured", label: "Destacada" },
-  { value: "discarded", label: "Descartada" },
-  { value: "spam", label: "Spam" },
-];
 
 export function NeedActions({
   id,
@@ -27,13 +17,13 @@ export function NeedActions({
   initialNotes: string;
 }) {
   const router = useRouter();
-  const [status, setStatus] = useState<Status>(initialStatus as Status);
+  const [status, setStatus] = useState<NeedStatus>(initialStatus as NeedStatus);
   const [notes, setNotes] = useState(initialNotes);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  function changeStatus(next: Status) {
+  function changeStatus(next: NeedStatus) {
     setError(null);
     startTransition(async () => {
       const res = await updateNeedStatus(id, next);
@@ -53,7 +43,6 @@ export function NeedActions({
       const res = await updateNeedNotes(id, notes || null);
       if (res.ok) {
         setSavedAt(Date.now());
-        router.refresh();
       } else {
         setError(res.error);
       }
@@ -65,19 +54,19 @@ export function NeedActions({
       <div>
         <h2 className="eyebrow mb-3">Estado</h2>
         <div className="flex flex-wrap gap-2">
-          {STATUSES.map((s) => (
+          {NEED_STATUSES.map((s) => (
             <button
-              key={s.value}
+              key={s}
               type="button"
               disabled={pending}
-              onClick={() => changeStatus(s.value)}
+              onClick={() => changeStatus(s)}
               className={`text-xs font-medium px-3 h-9 rounded-full border transition-colors ${
-                status === s.value
+                status === s
                   ? "bg-[var(--color-ink)] text-[var(--color-bg)] border-[var(--color-ink)]"
                   : "bg-[var(--color-surface)] text-[var(--color-ink-soft)] border-[var(--color-border)] hover:border-[var(--color-ink)]"
               } disabled:opacity-60`}
             >
-              {s.label}
+              {NEED_STATUS_LABEL[s]}
             </button>
           ))}
         </div>

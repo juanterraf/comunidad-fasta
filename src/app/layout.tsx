@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   title: "Comunidad FASTA",
   description: "Lo que somos, lo que hacemos, lo que compartimos.",
   robots: { index: false, follow: false },
+};
+
+export const viewport: Viewport = {
+  colorScheme: "light",
 };
 
 export default function RootLayout({

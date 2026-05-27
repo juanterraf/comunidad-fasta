@@ -5,28 +5,17 @@ import { communityNeeds, categories } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import {
+  NEED_STATUS_BADGE_CLASS,
+  NEED_STATUS_LABEL,
+  NEED_STATUSES,
+  type NeedStatus,
+} from "@/config/needs";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 25;
-const STATUS_OPTIONS = [
-  "",
-  "new",
-  "reviewed",
-  "resolved",
-  "discarded",
-  "spam",
-  "featured",
-] as const;
-
-const STATUS_LABEL: Record<string, string> = {
-  new: "Nueva",
-  reviewed: "Revisada",
-  resolved: "Resuelta",
-  discarded: "Descartada",
-  spam: "Spam",
-  featured: "Destacada",
-};
+const FILTER_STATUS_VALUES = ["", ...NEED_STATUSES] as const;
 
 export default async function NecesidadesAdminPage({
   searchParams,
@@ -36,7 +25,9 @@ export default async function NecesidadesAdminPage({
   await requireAdmin();
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
-  const status = STATUS_OPTIONS.includes((sp.status ?? "") as never) ? sp.status ?? "" : "";
+  const status = FILTER_STATUS_VALUES.includes((sp.status ?? "") as never)
+    ? sp.status ?? ""
+    : "";
   const page = Math.max(1, Number(sp.page) || 1);
 
   const conds: SQL[] = [];
@@ -122,9 +113,9 @@ export default async function NecesidadesAdminPage({
         />
         <Select name="status" defaultValue={status} className="md:w-48">
           <option value="">Todos los estados</option>
-          {(["new", "reviewed", "resolved", "featured", "discarded", "spam"] as const).map((s) => (
+          {NEED_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {STATUS_LABEL[s]}
+              {NEED_STATUS_LABEL[s]}
             </option>
           ))}
         </Select>
@@ -212,19 +203,12 @@ export default async function NecesidadesAdminPage({
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cls: Record<string, string> = {
-    new: "bg-[var(--color-secondary)] text-white",
-    reviewed: "bg-[var(--color-border)]/60 text-[var(--color-ink-soft)]",
-    resolved: "bg-[var(--color-ink)] text-[var(--color-bg)]",
-    featured: "bg-[var(--color-accent)] text-white",
-    discarded: "bg-white border border-[var(--color-border)] text-[var(--color-muted)]",
-    spam: "bg-white border border-[var(--color-border)] text-[var(--color-muted)] line-through",
-  };
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full ${cls[status] ?? ""}`}>
-      {STATUS_LABEL[status] ?? status}
-    </span>
-  );
+  const known = (NEED_STATUSES as readonly string[]).includes(status)
+    ? (status as NeedStatus)
+    : null;
+  const cls = known ? NEED_STATUS_BADGE_CLASS[known] : "";
+  const label = known ? NEED_STATUS_LABEL[known] : status;
+  return <span className={`text-xs px-2 py-0.5 rounded-full ${cls}`}>{label}</span>;
 }
 
 function Card({ label, value, href }: { label: string; value: number; href: string }) {

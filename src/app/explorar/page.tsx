@@ -25,12 +25,16 @@ export default async function ExplorarPage({
   searchParams: Promise<SearchParams>;
 }) {
   const sp = await searchParams;
-  const cats = await db.select().from(categories).orderBy(asc(categories.displayOrder));
 
-  const barriosRes = await db
-    .selectDistinct({ neighborhood: businesses.neighborhood })
-    .from(businesses)
-    .where(eq(businesses.status, "active"));
+  const [cats, barriosRes, campaignRow] = await Promise.all([
+    db.select().from(categories).orderBy(asc(categories.displayOrder)),
+    db
+      .selectDistinct({ neighborhood: businesses.neighborhood })
+      .from(businesses)
+      .where(eq(businesses.status, "active")),
+    sp.campana ? getCampaignBySlug(sp.campana) : Promise.resolve(null),
+  ]);
+
   const barrios = barriosRes
     .map((r) => r.neighborhood)
     .filter((n): n is string => Boolean(n))
@@ -52,36 +56,37 @@ export default async function ExplorarPage({
   if (sp.cita === "1") conditions.push(eq(businesses.byAppointment, true));
 
   let campaign: { title: string; description: string | null; colorHex: string } | null = null;
-  if (sp.campana) {
-    const c = await getCampaignBySlug(sp.campana);
-    if (c) {
-      campaign = { title: c.title, description: c.description, colorHex: c.colorHex };
-      if (c.categoryIds && c.categoryIds.length) {
-        conditions.push(inArray(businesses.categoryId, c.categoryIds));
-      }
+  if (campaignRow) {
+    campaign = {
+      title: campaignRow.title,
+      description: campaignRow.description,
+      colorHex: campaignRow.colorHex,
+    };
+    if (campaignRow.categoryIds && campaignRow.categoryIds.length) {
+      conditions.push(inArray(businesses.categoryId, campaignRow.categoryIds));
     }
   }
 
-  const rows = await db
-    .select({
-      id: businesses.id,
-      slug: businesses.slug,
-      name: businesses.name,
-      description: businesses.description,
-      neighborhood: businesses.neighborhood,
-      photoFilename: businesses.photoFilename,
-      categoryName: categories.name,
-    })
-    .from(businesses)
-    .leftJoin(categories, eq(businesses.categoryId, categories.id))
-    .where(and(...conditions))
-    .orderBy(desc(businesses.approvedAt))
-    .limit(120);
-
-  const [{ total }] = await db
-    .select({ total: sql<number>`count(*)::int` })
-    .from(businesses)
-    .where(and(...conditions));
+  const whereExpr = and(...conditions);
+  const [rows, totalRow] = await Promise.all([
+    db
+      .select({
+        id: businesses.id,
+        slug: businesses.slug,
+        name: businesses.name,
+        description: businesses.description,
+        neighborhood: businesses.neighborhood,
+        photoFilename: businesses.photoFilename,
+        categoryName: categories.name,
+      })
+      .from(businesses)
+      .leftJoin(categories, eq(businesses.categoryId, categories.id))
+      .where(whereExpr)
+      .orderBy(desc(businesses.approvedAt))
+      .limit(120),
+    db.select({ total: sql<number>`count(*)::int` }).from(businesses).where(whereExpr),
+  ]);
+  const total = totalRow[0]?.total ?? 0;
 
   return (
     <section className="max-w-7xl mx-auto px-5 md:px-8 pt-10 md:pt-16 pb-20 md:pb-24">
@@ -105,7 +110,7 @@ export default async function ExplorarPage({
         </p>
       </header>
 
-      <Filters categories={cats} barrios={barrios} initial={sp} />
+      <Filters categories={cats} barrios={barrios} />
 
       <div className="flex items-baseline justify-between mt-10 mb-8 gap-3 flex-wrap">
         <p className="metric">

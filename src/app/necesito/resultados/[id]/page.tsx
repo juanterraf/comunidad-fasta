@@ -7,6 +7,7 @@ import { communityNeeds } from "@/db/schema";
 import { searchByNeed } from "@/services/needs/need-search";
 import { Tag } from "@/components/ui/Tag";
 import { WhatsappIcon, InstagramIcon } from "@/components/icons/Brand";
+import { instagramHandle, instagramHref, whatsappHref } from "@/lib/contact";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,10 @@ export default async function ResultadosPage({
 
   if (!need) notFound();
 
+  // El snapshot persistido en `matchedResults` se reserva para auditoría
+  // (el admin lo ve tal como se mostró). Para el usuario re-ejecutamos la
+  // búsqueda en cada visita: garantiza datos frescos (fotos, contacto) y
+  // refleja emprendimientos nuevos que pudieron sumarse.
   const search = await searchByNeed({
     rawQuery: need.queryOriginal,
     zone: need.zone,
@@ -132,9 +137,9 @@ export default async function ResultadosPage({
                   ) : null}
 
                   <div className="flex flex-wrap gap-2">
-                    {r.whatsapp ? (
+                    {whatsappHref(r.whatsapp) ? (
                       <a
-                        href={`https://wa.me/${r.whatsapp.replace(/\D/g, "")}`}
+                        href={whatsappHref(r.whatsapp)!}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-[#25D366] text-white text-xs font-medium hover:bg-[#1ebe57] transition-colors"
@@ -142,9 +147,9 @@ export default async function ResultadosPage({
                         <WhatsappIcon className="w-3.5 h-3.5" /> WhatsApp
                       </a>
                     ) : null}
-                    {r.instagram ? (
+                    {instagramHandle(r.instagram) ? (
                       <a
-                        href={`https://instagram.com/${r.instagram.replace(/^@/, "")}`}
+                        href={instagramHref(r.instagram)!}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-[var(--color-surface)] border border-[var(--color-border-strong)] text-xs font-medium hover:border-[var(--color-ink)] transition-colors"

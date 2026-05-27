@@ -9,18 +9,22 @@ import { CampaignBanner } from "@/components/CampaignBanner";
 export const dynamic = "force-dynamic";
 
 async function getStats() {
-  const [{ active }] = await db
-    .select({ active: sql<number>`count(*)::int` })
-    .from(businesses)
-    .where(eq(businesses.status, "active"));
-  const [{ catCount }] = await db
-    .select({ catCount: sql<number>`count(*)::int` })
-    .from(categories);
-  const [{ famCount }] = await db
-    .select({ famCount: sql<number>`count(*)::int` })
-    .from(families)
-    .where(eq(families.validated, true));
-  return { active, catCount, famCount };
+  const [activeRow, catRow, famRow] = await Promise.all([
+    db
+      .select({ active: sql<number>`count(*)::int` })
+      .from(businesses)
+      .where(eq(businesses.status, "active")),
+    db.select({ catCount: sql<number>`count(*)::int` }).from(categories),
+    db
+      .select({ famCount: sql<number>`count(*)::int` })
+      .from(families)
+      .where(eq(families.validated, true)),
+  ]);
+  return {
+    active: activeRow[0]?.active ?? 0,
+    catCount: catRow[0]?.catCount ?? 0,
+    famCount: famRow[0]?.famCount ?? 0,
+  };
 }
 
 async function getRecent() {

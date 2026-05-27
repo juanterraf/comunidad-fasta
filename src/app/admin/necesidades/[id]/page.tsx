@@ -5,25 +5,22 @@ import { ArrowLeft } from "lucide-react";
 import { db } from "@/db";
 import { communityNeeds, categories } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
-import { searchByNeed } from "@/services/needs/need-search";
+import {
+  searchByNeed,
+  type MatchedResultSnapshot,
+} from "@/services/needs/need-search";
+import { whatsappHref } from "@/lib/contact";
+import {
+  NEED_STATUS_LABEL,
+  NEED_URGENCY_LABEL,
+  NEED_STATUSES,
+  NEED_URGENCIES,
+  type NeedStatus,
+  type NeedUrgency,
+} from "@/config/needs";
 import { NeedActions } from "./NeedActions";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_LABEL: Record<string, string> = {
-  new: "Nueva",
-  reviewed: "Revisada",
-  resolved: "Resuelta",
-  discarded: "Descartada",
-  spam: "Spam",
-  featured: "Destacada",
-};
-
-const URGENCY_LABEL: Record<string, string> = {
-  none: "Sin apuro",
-  soon: "En los próximos días",
-  urgent: "Hoy o mañana",
-};
 
 export default async function NeedDetailPage({
   params,
@@ -52,6 +49,14 @@ export default async function NeedDetailPage({
     categoryHintId: need.categoryHintId,
   });
 
+  const statusLabel = (NEED_STATUSES as readonly string[]).includes(need.status)
+    ? NEED_STATUS_LABEL[need.status as NeedStatus]
+    : need.status;
+  const urgencyLabel =
+    need.urgency && (NEED_URGENCIES as readonly string[]).includes(need.urgency)
+      ? NEED_URGENCY_LABEL[need.urgency as NeedUrgency]
+      : need.urgency ?? null;
+
   return (
     <div className="space-y-8">
       <Link
@@ -73,13 +78,11 @@ export default async function NeedDetailPage({
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Block label="Estado">
-          <span className="font-medium">{STATUS_LABEL[need.status] ?? need.status}</span>
+          <span className="font-medium">{statusLabel}</span>
         </Block>
         <Block label="Zona">{need.zone ?? "—"}</Block>
         <Block label="Rubro sugerido">{row.categoryName ?? "—"}</Block>
-        <Block label="Urgencia">
-          {need.urgency ? URGENCY_LABEL[need.urgency] ?? need.urgency : "—"}
-        </Block>
+        <Block label="Urgencia">{urgencyLabel ?? "—"}</Block>
         <Block label="Presupuesto">{need.budget ?? "—"}</Block>
         <Block label="Consultas ampliadas">
           {need.queryExpanded ? (
@@ -110,10 +113,10 @@ export default async function NeedDetailPage({
             </div>
             <div>
               <p className="text-xs uppercase text-[var(--color-muted)] mb-0.5">WhatsApp</p>
-              {need.whatsapp ? (
+              {whatsappHref(need.whatsapp) ? (
                 <a
                   className="underline"
-                  href={`https://wa.me/${need.whatsapp.replace(/\D/g, "")}`}
+                  href={whatsappHref(need.whatsapp)!}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -187,21 +190,9 @@ export default async function NeedDetailPage({
   );
 }
 
-type Snapshot = Array<{
-  id: string;
-  slug: string;
-  name: string;
-  score: number;
-  reasons: string[];
-  categoryName: string | null;
-}>;
-
-function isSnapshot(v: unknown): v is Snapshot {
-  return Array.isArray(v) && v.every((x) => x && typeof x === "object" && "id" in x);
-}
-
 function SnapshotResults({ snapshot }: { snapshot: unknown }) {
-  if (!isSnapshot(snapshot) || snapshot.length === 0) {
+  const list = (Array.isArray(snapshot) ? snapshot : []) as MatchedResultSnapshot[];
+  if (list.length === 0) {
     return (
       <p className="text-sm text-[var(--color-muted)]">
         No se devolvieron resultados al momento de la consulta.
@@ -210,7 +201,7 @@ function SnapshotResults({ snapshot }: { snapshot: unknown }) {
   }
   return (
     <ol className="text-sm space-y-1">
-      {snapshot.map((s) => (
+      {list.map((s) => (
         <li key={s.id} className="text-[var(--color-ink-soft)]">
           <span className="font-medium">{s.name}</span>{" "}
           <span className="text-xs text-[var(--color-muted)]">

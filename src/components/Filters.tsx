@@ -1,24 +1,25 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useTransition, useMemo, useState, useRef, useEffect } from "react";
+import {
+  useTransition,
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import { Search, X, SlidersHorizontal, ChevronDown } from "lucide-react";
 import type { Category } from "@/db/schema";
 
 type Props = {
   categories: Category[];
   barrios: string[];
-  initial: {
-    q?: string;
-    cat?: string;
-    barrio?: string;
-    envia?: string;
-    online?: string;
-    cita?: string;
-  };
 };
 
-export function Filters({ categories, barrios, initial }: Props) {
+const SEARCH_DEBOUNCE_MS = 300;
+
+export function Filters({ categories, barrios }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -26,17 +27,19 @@ export function Filters({ categories, barrios, initial }: Props) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const catRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const current = useMemo(() => {
-    return {
-      q: sp.get("q") ?? initial.q ?? "",
-      cat: sp.get("cat") ?? initial.cat ?? "",
-      barrio: sp.get("barrio") ?? initial.barrio ?? "",
-      envia: (sp.get("envia") ?? initial.envia) === "1",
-      online: (sp.get("online") ?? initial.online) === "1",
-      cita: (sp.get("cita") ?? initial.cita) === "1",
-    };
-  }, [sp, initial]);
+  const current = useMemo(
+    () => ({
+      q: sp.get("q") ?? "",
+      cat: sp.get("cat") ?? "",
+      barrio: sp.get("barrio") ?? "",
+      envia: sp.get("envia") === "1",
+      online: sp.get("online") === "1",
+      cita: sp.get("cita") === "1",
+    }),
+    [sp],
+  );
 
   const activeSecondary =
     Number(current.barrio !== "") +
@@ -45,25 +48,40 @@ export function Filters({ categories, barrios, initial }: Props) {
     Number(current.cita);
 
   useEffect(() => {
+    if (!catOpen) return;
     function onClick(e: MouseEvent) {
       if (catRef.current && !catRef.current.contains(e.target as Node)) {
         setCatOpen(false);
       }
     }
-    if (catOpen) document.addEventListener("mousedown", onClick);
+    document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [catOpen]);
 
-  function update(patch: Partial<Record<string, string | boolean>>) {
-    const params = new URLSearchParams(sp.toString());
-    for (const [k, v] of Object.entries(patch)) {
-      if (v === "" || v === false || v === undefined || v === null) params.delete(k);
-      else if (v === true) params.set(k, "1");
-      else params.set(k, String(v));
-    }
-    startTransition(() => {
-      router.replace(`${pathname}?${params.toString()}`);
-    });
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const update = useCallback(
+    (patch: Partial<Record<string, string | boolean>>) => {
+      const params = new URLSearchParams(sp.toString());
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === "" || v === false || v === undefined || v === null) params.delete(k);
+        else if (v === true) params.set(k, "1");
+        else params.set(k, String(v));
+      }
+      startTransition(() => {
+        router.replace(`${pathname}?${params.toString()}`);
+      });
+    },
+    [sp, pathname, router],
+  );
+
+  function onSearchChange(value: string) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => update({ q: value }), SEARCH_DEBOUNCE_MS);
   }
 
   const anyFilter =
@@ -78,7 +96,6 @@ export function Filters({ categories, barrios, initial }: Props) {
 
   return (
     <div>
-      {/* Buscador protagonista — input editorial sin pill */}
       <div className="relative border-b-2 border-[var(--color-ink)] pb-2 mb-6">
         <Search
           size={20}
@@ -88,7 +105,7 @@ export function Filters({ categories, barrios, initial }: Props) {
           type="search"
           placeholder="¿Qué estás buscando?"
           defaultValue={current.q}
-          onChange={(e) => update({ q: e.currentTarget.value })}
+          onChange={(e) => onSearchChange(e.currentTarget.value)}
           className="w-full pl-9 pr-4 py-2 bg-transparent font-display text-2xl md:text-3xl tracking-[-0.02em] placeholder:text-[var(--color-subtle)] focus:outline-none"
         />
         {pending ? (
@@ -101,10 +118,8 @@ export function Filters({ categories, barrios, initial }: Props) {
         ) : null}
       </div>
 
-      {/* Fila de filtros primaria: rubro como dropdown editorial + toggle de avanzados */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-          {/* Dropdown de rubro */}
           <div ref={catRef} className="relative">
             <button
               type="button"
@@ -158,7 +173,6 @@ export function Filters({ categories, barrios, initial }: Props) {
             ) : null}
           </div>
 
-          {/* Toggle avanzados */}
           <button
             type="button"
             onClick={() => setAdvancedOpen((v) => !v)}
@@ -199,7 +213,6 @@ export function Filters({ categories, barrios, initial }: Props) {
         ) : null}
       </div>
 
-      {/* Filtros avanzados (colapsable) */}
       {advancedOpen ? (
         <div className="mt-4 p-5 bg-[var(--color-surface-warm)] border border-[var(--color-border)]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

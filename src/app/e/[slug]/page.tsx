@@ -9,6 +9,7 @@ import { ReactionBar } from "@/components/ReactionBar";
 import { MiniMap } from "@/components/map/MiniMapLoader";
 import { getReactions } from "@/actions/reactions";
 import { readAnonId } from "@/lib/anon";
+import { instagramHandle, instagramHref, whatsappHref } from "@/lib/contact";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -151,9 +152,9 @@ export default async function FichaPage({
 
               {/* CTAs de contacto */}
               <div className="space-y-3">
-                {b.whatsapp ? (
+                {whatsappHref(b.whatsapp) ? (
                   <a
-                    href={`https://wa.me/${b.whatsapp.replace(/\D/g, "")}`}
+                    href={whatsappHref(b.whatsapp)!}
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center justify-between gap-3 h-14 px-6 bg-[var(--color-success)] text-white font-medium hover:opacity-90 transition-opacity"
@@ -163,20 +164,20 @@ export default async function FichaPage({
                       Escribir por WhatsApp
                     </span>
                     <span className="text-xs opacity-80 tracking-wide">
-                      {b.whatsapp.replace(/^(\d{2,3})(\d{2,3})(\d+)$/, "+$1 $2 $3")}
+                      {b.whatsapp!.replace(/^(\d{2,3})(\d{2,3})(\d+)$/, "+$1 $2 $3")}
                     </span>
                   </a>
                 ) : null}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {b.instagram ? (
+                  {instagramHandle(b.instagram) ? (
                     <a
-                      href={`https://instagram.com/${b.instagram.replace(/^@/, "")}`}
+                      href={instagramHref(b.instagram)!}
                       target="_blank"
                       rel="noreferrer"
                       className="flex items-center gap-3 h-12 px-5 border border-[var(--color-border-strong)] text-[var(--color-ink)] text-[14.5px] font-medium hover:border-[var(--color-ink)] transition-colors"
                     >
                       <InstagramIcon className="w-4 h-4" />
-                      @{b.instagram.replace(/^@/, "")}
+                      @{instagramHandle(b.instagram)}
                     </a>
                   ) : null}
                   {b.website ? (

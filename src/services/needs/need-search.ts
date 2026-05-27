@@ -32,6 +32,28 @@ export type NeedSearchResponse = {
   results: NeedSearchResultRow[];
 };
 
+export type MatchedResultSnapshot = {
+  id: string;
+  slug: string;
+  name: string;
+  score: number;
+  reasons: string[];
+  categoryName: string | null;
+};
+
+export function snapshotFromResults(
+  results: NeedSearchResultRow[],
+): MatchedResultSnapshot[] {
+  return results.map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    score: r.score,
+    reasons: r.reasons,
+    categoryName: r.categoryName,
+  }));
+}
+
 type CandidateRow = {
   id: string;
   slug: string;
