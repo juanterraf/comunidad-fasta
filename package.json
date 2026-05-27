@@ -5,19 +5,49 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "audit": "pnpm audit --prod",
+    "fonts:copy": "tsx --tsconfig tsconfig.json scripts/copy-fonts.ts",
+    "cleanup:images": "tsx --tsconfig tsconfig.json scripts/cleanup-images.ts",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:push": "drizzle-kit push",
+    "seed:dev": "tsx --tsconfig tsconfig.json src/db/seed.ts"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "drizzle-orm": "^0.45.2",
+    "iron-session": "^8.0.4",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^1.16.0",
     "next": "16.2.6",
+    "nodemailer": "^8.0.9",
+    "pg": "^8.21.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "react-leaflet": "^5.0.0",
+    "sharp": "^0.34.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource/poppins": "^5.2.7",
     "@tailwindcss/postcss": "^4",
+    "@types/bcrypt": "^6.0.0",
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.0",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4",
+    "tsx": "^4.22.3",
     "typescript": "^5"
   }
 }

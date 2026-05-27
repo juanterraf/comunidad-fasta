@@ -1,0 +1,92 @@
+import { mkdir, readFile, stat, unlink } from "node:fs/promises";
+import path from "node:path";
+import sharp from "sharp";
+
+export const SIZES = {
+  orig: { width: 1600, quality: 80 },
+  card: { width: 800, height: 600, quality: 80 },
+  thumb: { width: 200, height: 150, quality: 75 },
+} as const;
+export type Size = keyof typeof SIZES;
+
+function root(): string {
+  return process.env.STORAGE_PATH || path.join(process.cwd(), "storage");
+}
+
+function businessDir(): string {
+  return path.join(root(), "businesses");
+}
+
+export function filenameFor(id: string, size: Size): string {
+  return `${id}-${size}.webp`;
+}
+
+export function pathFor(id: string, size: Size): string {
+  return path.join(businessDir(), filenameFor(id, size));
+}
+
+export async function processAndStore(
+  id: string,
+  buffer: ArrayBuffer | Buffer,
+): Promise<{ baseFilename: string }> {
+  await mkdir(businessDir(), { recursive: true });
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+
+  await sharp(buf, { failOn: "none" })
+    .rotate()
+    .resize(SIZES.orig.width, undefined, { withoutEnlargement: true, fit: "inside" })
+    .webp({ quality: SIZES.orig.quality })
+    .toFile(pathFor(id, "orig"));
+
+  await sharp(buf, { failOn: "none" })
+    .rotate()
+    .resize(SIZES.card.width, SIZES.card.height, { fit: "cover", position: "centre" })
+    .webp({ quality: SIZES.card.quality })
+    .toFile(pathFor(id, "card"));
+
+  await sharp(buf, { failOn: "none" })
+    .rotate()
+    .resize(SIZES.thumb.width, SIZES.thumb.height, { fit: "cover", position: "centre" })
+    .webp({ quality: SIZES.thumb.quality })
+    .toFile(pathFor(id, "thumb"));
+
+  return { baseFilename: `${id}.webp` };
+}
+
+export async function readImage(id: string, size: Size): Promise<Buffer | null> {
+  try {
+    const p = pathFor(id, size);
+    await stat(p);
+    return await readFile(p);
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteImage(id: string): Promise<void> {
+  for (const size of ["orig", "card", "thumb"] as const) {
+    try {
+      await unlink(pathFor(id, size));
+    } catch {
+      // ignore — file may not exist
+    }
+  }
+}
+
+export async function writePlaceholder(id: string, color: string): Promise<void> {
+  await mkdir(businessDir(), { recursive: true });
+  for (const size of ["orig", "card", "thumb"] as const) {
+    const { width, height } = SIZES[size] as { width: number; height?: number };
+    const h = height ?? Math.round(width * 0.75);
+    await sharp({
+      create: {
+        width,
+        height: h,
+        channels: 3,
+        background: color,
+      },
+    })
+      .webp({ quality: 75 })
+      .toFile(pathFor(id, size));
+  }
+}
