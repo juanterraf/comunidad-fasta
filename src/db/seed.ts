@@ -1,5 +1,7 @@
 import "./_env";
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { db } from "./index";
 import {
   adminUsers,
@@ -13,8 +15,22 @@ import {
 } from "./schema";
 import { slugify } from "@/lib/slugify";
 import bcrypt from "bcrypt";
-import { writePlaceholder } from "@/lib/images";
+import { processAndStore, writePlaceholder } from "@/lib/images";
 import { sql } from "drizzle-orm";
+
+async function storeBusinessPhoto(
+  id: string,
+  slug: string,
+  fallbackColor: string,
+): Promise<void> {
+  const photoPath = path.join(process.cwd(), "seed", "businesses-photos", `${slug}.jpg`);
+  try {
+    const buf = await readFile(photoPath);
+    await processAndStore(id, buf);
+  } catch {
+    await writePlaceholder(id, fallbackColor);
+  }
+}
 
 const CATEGORIES: Array<{ name: string; icon: string }> = [
   { name: "Alimentos y bebidas", icon: "meat" },
@@ -262,7 +278,7 @@ async function main() {
         approvedAt: new Date(),
       })
       .returning();
-    await writePlaceholder(row.id, b.color);
+    await storeBusinessPhoto(row.id, slug, b.color);
     await db
       .update(businesses)
       .set({ photoFilename: `${row.id}.webp` })
