@@ -42,7 +42,10 @@ const SubmitSchema = z.object({
   tags: z.string().optional(),
   lat: z.coerce.number().min(-90).max(90).optional().nullable(),
   lng: z.coerce.number().min(-180).max(180).optional().nullable(),
-  validatorIds: z.array(z.string().uuid()).length(3, "Elegí 3 validadores distintos."),
+  validatorIds: z
+    .array(z.string().uuid())
+    .min(1, "Elegí al menos un miembro validado que te conozca.")
+    .max(3, "Hasta 3 validadores."),
 });
 
 async function uniqueSlug(base: string): Promise<string> {
@@ -59,25 +62,74 @@ async function uniqueSlug(base: string): Promise<string> {
   }
 }
 
-type SubmitError = { ok: false; error: string };
+export type SubmitFormValues = {
+  name: string;
+  description: string;
+  categoryId: string;
+  neighborhood: string;
+  address: string;
+  ownerEmail: string;
+  ownerName: string;
+  ownerRole: string;
+  ownerPhone: string;
+  whatsapp: string;
+  instagram: string;
+  website: string;
+  delivers: boolean;
+  onlineOnly: boolean;
+  byAppointment: boolean;
+  tags: string;
+};
+
+type SubmitError = { ok: false; error: string; values: SubmitFormValues };
+
+function readFormValues(fd: FormData): SubmitFormValues {
+  return {
+    name: String(fd.get("name") ?? ""),
+    description: String(fd.get("description") ?? ""),
+    categoryId: String(fd.get("categoryId") ?? ""),
+    neighborhood: String(fd.get("neighborhood") ?? ""),
+    address: String(fd.get("address") ?? ""),
+    ownerEmail: String(fd.get("ownerEmail") ?? ""),
+    ownerName: String(fd.get("ownerName") ?? ""),
+    ownerRole: String(fd.get("ownerRole") ?? "familia"),
+    ownerPhone: String(fd.get("ownerPhone") ?? ""),
+    whatsapp: String(fd.get("whatsapp") ?? ""),
+    instagram: String(fd.get("instagram") ?? ""),
+    website: String(fd.get("website") ?? ""),
+    delivers: fd.get("delivers") === "on",
+    onlineOnly: fd.get("onlineOnly") === "on",
+    byAppointment: fd.get("byAppointment") === "on",
+    tags: String(fd.get("tags") ?? ""),
+  };
+}
 
 export async function submitBusiness(_prev: unknown, fd: FormData): Promise<SubmitError | void> {
+  const values = readFormValues(fd);
   const validatorIdsRaw = fd.getAll("validatorIds").map(String).filter(Boolean);
 
-  if (!fd.get("ownerEmail") || !fd.get("ownerName")) {
-    return { ok: false, error: "Faltan datos del solicitante." };
+  if (!values.ownerEmail || !values.ownerName) {
+    return { ok: false, error: "Faltan datos del solicitante.", values };
   }
 
   const ip = await clientIp();
   const ipLimit = rateLimit(`submit-business:ip:${ip}`, 5, 60 * 60_000);
   if (!ipLimit.ok) {
-    return { ok: false, error: `Demasiados envíos. ${retryMessage(ipLimit.retryAfterMs)}` };
+    return {
+      ok: false,
+      error: `Demasiados envíos. ${retryMessage(ipLimit.retryAfterMs)}`,
+      values,
+    };
   }
-  const emailRaw = String(fd.get("ownerEmail") ?? "").trim().toLowerCase();
+  const emailRaw = values.ownerEmail.trim().toLowerCase();
   if (emailRaw) {
     const emailLimit = rateLimit(`submit-business:email:${emailRaw}`, 3, 60 * 60_000);
     if (!emailLimit.ok) {
-      return { ok: false, error: `Demasiados envíos. ${retryMessage(emailLimit.retryAfterMs)}` };
+      return {
+        ok: false,
+        error: `Demasiados envíos. ${retryMessage(emailLimit.retryAfterMs)}`,
+        values,
+      };
     }
   }
 
@@ -104,36 +156,40 @@ export async function submitBusiness(_prev: unknown, fd: FormData): Promise<Subm
   });
 
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos.", values };
   }
 
   if (!parsed.data.whatsapp && !parsed.data.instagram) {
-    return { ok: false, error: "Cargá al menos un WhatsApp o un Instagram para que te contacten." };
+    return {
+      ok: false,
+      error: "Cargá al menos un WhatsApp o un Instagram para que te contacten.",
+      values,
+    };
   }
 
   const uniqueValidators = Array.from(new Set(parsed.data.validatorIds));
-  if (uniqueValidators.length !== 3) {
-    return { ok: false, error: "Elegí 3 validadores distintos." };
+  if (uniqueValidators.length === 0 || uniqueValidators.length > 3) {
+    return { ok: false, error: "Elegí entre 1 y 3 validadores distintos.", values };
   }
 
   const validators = await db
     .select()
     .from(families)
     .where(and(inArray(families.id, uniqueValidators), eq(families.validated, true)));
-  if (validators.length !== 3) {
-    return { ok: false, error: "Alguno de los validadores no está habilitado." };
+  if (validators.length !== uniqueValidators.length) {
+    return { ok: false, error: "Alguno de los validadores no está habilitado.", values };
   }
   if (validators.some((v) => v.email === parsed.data.ownerEmail)) {
-    return { ok: false, error: "No podés validarte a vos mismo." };
+    return { ok: false, error: "No podés validarte a vos mismo.", values };
   }
 
   const photo = fd.get("photo");
   if (!(photo instanceof File) || photo.size === 0) {
-    return { ok: false, error: "Subí una foto del emprendimiento." };
+    return { ok: false, error: "Subí una foto del emprendimiento.", values };
   }
   const maxMb = Number(process.env.MAX_UPLOAD_SIZE_MB ?? 8);
   if (photo.size > maxMb * 1024 * 1024) {
-    return { ok: false, error: `La foto pesa más de ${maxMb}MB.` };
+    return { ok: false, error: `La foto pesa más de ${maxMb}MB.`, values };
   }
 
   const slug = await uniqueSlug(parsed.data.name);
@@ -150,7 +206,11 @@ export async function submitBusiness(_prev: unknown, fd: FormData): Promise<Subm
   } catch (err) {
     console.error("[submit] image processing failed", err);
     await deleteImage(businessId);
-    return { ok: false, error: "No pudimos procesar la foto. Probá con otra imagen (JPG o PNG)." };
+    return {
+      ok: false,
+      error: "No pudimos procesar la foto. Probá con otra imagen (JPG o PNG).",
+      values,
+    };
   }
 
   const expiresAt = inDays(7);
@@ -227,7 +287,11 @@ export async function submitBusiness(_prev: unknown, fd: FormData): Promise<Subm
   } catch (err) {
     console.error("[submit] db transaction failed", err);
     await deleteImage(businessId);
-    return { ok: false, error: "No pudimos guardar tu pedido. Intentá de nuevo en un rato." };
+    return {
+      ok: false,
+      error: "No pudimos guardar tu pedido. Intentá de nuevo en un rato.",
+      values,
+    };
   }
 
   await logEvent({
@@ -366,7 +430,7 @@ export async function respondValidation(
             eq(validationRequests.status, "approved"),
           ),
         );
-      if ((count?.n ?? 0) < 2) return null;
+      if ((count?.n ?? 0) < 1) return null;
 
       const [activated] = await tx
         .update(businesses)

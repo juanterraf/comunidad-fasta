@@ -16,8 +16,8 @@ export default async function SumartePage() {
           Sumá tu emprendimiento.
         </h1>
         <p className="text-[var(--color-muted)] text-lg md:text-xl leading-relaxed max-w-2xl">
-          Completá los datos. Elegí tres miembros validados que te conozcan.
-          Cuando dos confirmen, sale al aire.
+          Completá los datos. Elegí al menos un miembro validado que te
+          conozca (hasta tres). En cuanto uno confirme, sale al aire.
         </p>
       </header>
       <SubmitForm categories={cats} />

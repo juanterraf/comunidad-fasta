@@ -153,7 +153,7 @@ Un solo click, no responde nada más.
     const text = `Hola ${args.applicantName},
 
 Recibimos tu pedido para sumar "${args.businessName}" a Comunidad FASTA.
-Avisamos a tres miembros de la comunidad. Cuando dos confirmen, sale al aire y te avisamos.
+Avisamos a los miembros que elegiste como validadores. En cuanto uno confirme, sale al aire y te avisamos.
 
 — Comunidad FASTA`;
     const html = shell(
@@ -161,7 +161,7 @@ Avisamos a tres miembros de la comunidad. Cuando dos confirmen, sale al aire y t
       "Tu emprendimiento está en camino.",
       `${p(`Hola ${escapeHtml(args.applicantName)},`)}
        ${p(`Recibimos tu pedido para sumar <strong style="color:${C.ink}; font-weight:600;">${escapeHtml(args.businessName)}</strong>.`)}
-       ${p("Avisamos a las tres familias que elegiste como validadoras. Cuando dos confirmen, tu emprendimiento sale al aire y te avisamos por mail.")}`,
+       ${p("Avisamos a los miembros que elegiste como validadores. En cuanto uno confirme, tu emprendimiento sale al aire y te avisamos por mail.")}`,
     );
     return {
       to: "",
