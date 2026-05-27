@@ -69,7 +69,7 @@ type CandidateRow = {
   website: string | null;
   tags: string[] | null;
   isFeaturedStory: boolean;
-  approvedAt: Date | null;
+  approvedAt: Date | string | null;
   tsRank: number;
 };
 
@@ -93,9 +93,19 @@ function tagOverlap(tags: string[], tokenSet: Set<string>): string[] {
   return out;
 }
 
-function recencyBoost(approvedAt: Date | null): number {
+function toPgTextArrayLiteral(items: readonly string[]): string {
+  if (items.length === 0) return "{}";
+  const escaped = items.map(
+    (s) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`,
+  );
+  return `{${escaped.join(",")}}`;
+}
+
+function recencyBoost(approvedAt: Date | string | null): number {
   if (!approvedAt) return 0;
-  const days = (Date.now() - approvedAt.getTime()) / (1000 * 60 * 60 * 24);
+  const ts = approvedAt instanceof Date ? approvedAt.getTime() : Date.parse(approvedAt);
+  if (Number.isNaN(ts)) return 0;
+  const days = (Date.now() - ts) / (1000 * 60 * 60 * 24);
   if (days <= 0) return SEARCH_WEIGHTS.recencyBoost;
   if (days >= SEARCH_WEIGHTS.recencyDays) return 0;
   return SEARCH_WEIGHTS.recencyBoost * (1 - days / SEARCH_WEIGHTS.recencyDays);
@@ -107,7 +117,9 @@ export async function searchByNeed(input: NeedSearchInput): Promise<NeedSearchRe
   const categoryHintId = input.categoryHintId ?? null;
 
   const tsQuery = expanded.expandedText.length > 0 ? expanded.expandedText : expanded.normalized;
-  const tokenArrayParam = expanded.expandedTokens.length > 0 ? expanded.expandedTokens : [""];
+  const tokenArrayLiteral = toPgTextArrayLiteral(
+    expanded.expandedTokens.length > 0 ? expanded.expandedTokens : [""],
+  );
 
   const candidatesRaw = await db.execute<CandidateRow>(sql`
     select
@@ -147,7 +159,7 @@ export async function searchByNeed(input: NeedSearchInput): Promise<NeedSearchRe
           coalesce(c.name, '') || ' ' ||
           coalesce(array_to_string(b.tags, ' '), '')
         ) @@ websearch_to_tsquery('spanish', ${tsQuery})
-        or b.tags && ${tokenArrayParam}::text[]
+        or b.tags && ${tokenArrayLiteral}::text[]
         or (${categoryHintId}::uuid is not null and b.category_id = ${categoryHintId}::uuid)
         or (${zoneNorm}::text <> '' and lower(coalesce(b.neighborhood, '')) like '%' || ${zoneNorm} || '%')
       )
