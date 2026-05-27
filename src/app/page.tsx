@@ -108,14 +108,17 @@ export default async function HomePage() {
           </p>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-end">
             <div className="lg:col-span-7">
-              <h1 className="display-xl text-[56px] sm:text-[80px] md:text-[112px] lg:text-[128px] mb-8">
-                <span className="block">La comunidad</span>
-                <span className="block">también</span>
-                <span className="block text-[var(--color-accent)]">emprende.</span>
+              <h1 className="display-xl text-[44px] sm:text-[64px] md:text-[88px] lg:text-[104px] mb-8">
+                <span className="block">Lo que somos,</span>
+                <span className="block">lo que hacemos,</span>
+                <span className="block text-[var(--color-accent)]">
+                  lo que compartimos.
+                </span>
               </h1>
               <p className="text-lg md:text-xl text-[var(--color-muted)] max-w-xl leading-relaxed mb-8">
-                Talentos, comercios y servicios de las familias del colegio.
-                Buscalo dentro antes de buscarlo afuera.
+                Un espacio para descubrir talentos, servicios, comercios y
+                proyectos de las familias que forman parte de la comunidad
+                FASTA.
               </p>
               <div className="flex flex-wrap items-center gap-5">
                 <Link
@@ -126,10 +129,10 @@ export default async function HomePage() {
                   <ArrowRight size={17} />
                 </Link>
                 <Link
-                  href="/necesito"
+                  href="/sumarte"
                   className="inline-flex items-center gap-1 text-[15px] font-medium text-[var(--color-ink)] border-b-2 border-[var(--color-ink)] pb-0.5 hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors"
                 >
-                  Necesito algo
+                  Sumar el mío
                 </Link>
               </div>
             </div>
@@ -204,9 +207,9 @@ export default async function HomePage() {
             <div>
               <p className="editorial-rule mb-5">Necesito algo</p>
               <p className="font-display text-2xl md:text-4xl lg:text-5xl tracking-[-0.03em] leading-[1.05] max-w-3xl">
-                Antes de buscarlo afuera,{" "}
+                Decinos qué necesitás.{" "}
                 <span className="text-[var(--color-muted)]">
-                  fijate si lo hace alguien de la comunidad.
+                  Quizá ya lo hace alguien adentro.
                 </span>
               </p>
             </div>
