@@ -42,7 +42,7 @@ async function getRecent() {
     .leftJoin(categories, eq(businesses.categoryId, categories.id))
     .where(eq(businesses.status, "active"))
     .orderBy(desc(businesses.approvedAt))
-    .limit(9);
+    .limit(10);
 }
 
 async function getFeaturedStory() {
@@ -91,9 +91,10 @@ export default async function HomePage() {
     getFeaturedStory(),
   ]);
 
-  const featured = recent[0];
-  const secondaries = recent.slice(1, 3);
-  const recentRest = recent.slice(3, 9);
+  const heroFeatured = recent[0];
+  const featured = recent[1];
+  const secondaries = recent.slice(2, 4);
+  const recentRest = recent.slice(4, 10);
   const year = new Date().getFullYear();
 
   return (
@@ -137,9 +138,12 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="lg:col-span-5">
-              <HeroVisualPlaceholder />
-            </div>
+            {heroFeatured ? (
+              <div className="lg:col-span-5">
+                <p className="eyebrow mb-4">De la comunidad</p>
+                <BusinessCard b={heroFeatured} size="featured" />
+              </div>
+            ) : null}
           </div>
 
           {/* Stats integrados como dato editorial */}
@@ -378,41 +382,5 @@ export default async function HomePage() {
         </div>
       </section>
     </>
-  );
-}
-
-function HeroVisualPlaceholder() {
-  return (
-    <div
-      className="relative aspect-[4/5] bg-[var(--color-surface)] border border-[var(--color-border)] overflow-hidden"
-      aria-hidden="true"
-    >
-      <div className="absolute inset-0 flex flex-col">
-        <div className="flex-1 grid grid-cols-3 grid-rows-3">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div
-              key={i}
-              className={`border-[var(--color-border)] ${
-                i % 3 !== 2 ? "border-r" : ""
-              } ${i < 6 ? "border-b" : ""}`}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
-        <p className="text-[10px] tracking-[0.22em] uppercase font-medium text-[var(--color-muted)] mb-3">
-          Edición 01 · {new Date().getFullYear()}
-        </p>
-        <p className="font-display text-[22px] md:text-[28px] tracking-[-0.025em] leading-[1.05] mb-1">
-          Una vidriera con un filtro de pertenencia.
-        </p>
-        <p className="text-sm text-[var(--color-muted)]">
-          Familias, docentes, egresados y miembros del colegio.
-        </p>
-      </div>
-      <span className="absolute top-6 left-6 inline-flex items-center justify-center w-9 h-9 border border-[var(--color-ink)] text-[var(--color-ink)] font-display text-[15px] font-bold">
-        f
-      </span>
-    </div>
   );
 }
