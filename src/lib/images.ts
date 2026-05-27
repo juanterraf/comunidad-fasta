@@ -3,11 +3,16 @@ import path from "node:path";
 import sharp from "sharp";
 
 export const SIZES = {
-  orig: { width: 1600, quality: 80 },
-  card: { width: 800, height: 600, quality: 80 },
-  thumb: { width: 200, height: 150, quality: 75 },
+  orig: { width: 1400, quality: 75 },
+  card: { width: 800, height: 600, quality: 72 },
+  thumb: { width: 200, height: 150, quality: 68 },
 } as const;
 export type Size = keyof typeof SIZES;
+
+// effort 6 = compresión máxima (encode ~2-3x más lento que default 4,
+// pero el upload es one-shot y la ganancia en bytes vale).
+// smartSubsample mejora bordes nítidos (texto/líneas) con costo ~0.
+const WEBP_OPTS = { effort: 6, smartSubsample: true } as const;
 
 function root(): string {
   return process.env.STORAGE_PATH || path.join(process.cwd(), "storage");
@@ -32,23 +37,23 @@ export async function processAndStore(
   await mkdir(businessDir(), { recursive: true });
   const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 
-  await sharp(buf, { failOn: "none" })
-    .rotate()
-    .resize(SIZES.orig.width, undefined, { withoutEnlargement: true, fit: "inside" })
-    .webp({ quality: SIZES.orig.quality })
-    .toFile(pathFor(id, "orig"));
-
-  await sharp(buf, { failOn: "none" })
-    .rotate()
-    .resize(SIZES.card.width, SIZES.card.height, { fit: "cover", position: "centre" })
-    .webp({ quality: SIZES.card.quality })
-    .toFile(pathFor(id, "card"));
-
-  await sharp(buf, { failOn: "none" })
-    .rotate()
-    .resize(SIZES.thumb.width, SIZES.thumb.height, { fit: "cover", position: "centre" })
-    .webp({ quality: SIZES.thumb.quality })
-    .toFile(pathFor(id, "thumb"));
+  await Promise.all([
+    sharp(buf, { failOn: "none" })
+      .rotate()
+      .resize(SIZES.orig.width, undefined, { withoutEnlargement: true, fit: "inside" })
+      .webp({ quality: SIZES.orig.quality, ...WEBP_OPTS })
+      .toFile(pathFor(id, "orig")),
+    sharp(buf, { failOn: "none" })
+      .rotate()
+      .resize(SIZES.card.width, SIZES.card.height, { fit: "cover", position: "centre" })
+      .webp({ quality: SIZES.card.quality, ...WEBP_OPTS })
+      .toFile(pathFor(id, "card")),
+    sharp(buf, { failOn: "none" })
+      .rotate()
+      .resize(SIZES.thumb.width, SIZES.thumb.height, { fit: "cover", position: "centre" })
+      .webp({ quality: SIZES.thumb.quality, ...WEBP_OPTS })
+      .toFile(pathFor(id, "thumb")),
+  ]);
 
   return { baseFilename: `${id}.webp` };
 }
