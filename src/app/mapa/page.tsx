@@ -35,7 +35,7 @@ export default async function MapaPage() {
     <section className="max-w-7xl mx-auto px-5 md:px-8 pt-10 md:pt-16 pb-20 md:pb-24">
       <header className="mb-10 md:mb-14 max-w-3xl">
         <p className="editorial-rule mb-6">En el mapa</p>
-        <h1 className="display-xl text-5xl md:text-7xl mb-4">
+        <h1 className="display-xl text-4xl sm:text-5xl md:text-7xl mb-4">
           Los que tienen local.
         </h1>
         <p className="text-[var(--color-muted)] text-lg md:text-xl leading-relaxed">

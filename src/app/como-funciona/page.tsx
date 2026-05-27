@@ -9,7 +9,7 @@ export default function ComoFuncionaPage() {
         <div className="max-w-7xl mx-auto px-5 md:px-8 pt-14 md:pt-24 pb-14 md:pb-20">
           <p className="editorial-rule mb-10">Cómo funciona</p>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            <h1 className="lg:col-span-8 display-xl text-5xl md:text-7xl lg:text-[96px]">
+            <h1 className="lg:col-span-8 display-xl text-4xl sm:text-5xl md:text-7xl lg:text-[96px] break-words">
               Una vidriera con un filtro de pertenencia.
             </h1>
             <p className="lg:col-span-4 lg:pt-3 text-lg md:text-xl text-[var(--color-muted)] leading-relaxed">
@@ -92,7 +92,7 @@ export default function ComoFuncionaPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-8">
             <p className="eyebrow mb-3">Sumarte</p>
-            <h2 className="font-display text-4xl md:text-6xl tracking-[-0.035em] leading-[0.98] mb-8">
+            <h2 className="font-display text-3xl sm:text-4xl md:text-6xl tracking-[-0.035em] leading-[1.02] md:leading-[0.98] mb-8">
               ¿Listo para sumar
               <br />
               <span className="text-[var(--color-accent)]">lo tuyo?</span>

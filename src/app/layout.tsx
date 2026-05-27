@@ -21,14 +21,37 @@ const inter = localFont({
   src: "./fonts/inter-latin-wght-normal.woff2",
 });
 
+const SITE_URL = process.env.APP_URL ?? "https://comunidadfasta.cloud";
+const SITE_DESCRIPTION =
+  "Un espacio para descubrir talentos, servicios, comercios y proyectos de las familias que forman parte de la comunidad FASTA — Colegio Boisdron, Tucumán.";
+
 export const metadata: Metadata = {
-  title: "Comunidad FASTA",
-  description: "Lo que somos, lo que hacemos, lo que compartimos.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Comunidad FASTA — Lo que somos, lo que hacemos, lo que compartimos.",
+    template: "%s — Comunidad FASTA",
+  },
+  description: SITE_DESCRIPTION,
   robots: { index: false, follow: false },
+  openGraph: {
+    type: "website",
+    siteName: "Comunidad FASTA",
+    locale: "es_AR",
+    url: SITE_URL,
+    title: "Comunidad FASTA — Lo que somos, lo que hacemos, lo que compartimos.",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Comunidad FASTA",
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {
   colorScheme: "light",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

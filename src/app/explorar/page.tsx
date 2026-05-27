@@ -101,7 +101,7 @@ export default async function ExplorarPage({
         ) : (
           <p className="editorial-rule mb-6">Explorar la comunidad</p>
         )}
-        <h1 className="display-xl text-5xl md:text-7xl mb-4">
+        <h1 className="display-xl text-4xl sm:text-5xl md:text-7xl mb-4 break-words">
           {campaign ? campaign.title : "Lo que ofrece la comunidad."}
         </h1>
         <p className="text-[var(--color-muted)] text-lg md:text-xl leading-relaxed">

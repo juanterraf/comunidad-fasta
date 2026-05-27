@@ -51,11 +51,42 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const b = await getBusinessBySlug(slug);
-  if (!b) return { title: "Comunidad FASTA", robots: { index: false, follow: false } };
+  if (!b) return { title: "No encontrado", robots: { index: false, follow: false } };
+
+  const description = (b.description ?? "Emprendimiento de la comunidad FASTA.").slice(
+    0,
+    200,
+  );
+  const ogImage = b.photoFilename
+    ? [
+        {
+          url: `/api/image/${b.id}/orig`,
+          alt: b.name,
+          width: 1600,
+          height: 1200,
+        },
+      ]
+    : undefined;
+
   return {
-    title: `${b.name} — Comunidad FASTA`,
-    description: (b.description ?? "").slice(0, 160),
+    title: b.name,
+    description,
     robots: { index: false, follow: false },
+    openGraph: {
+      type: "article",
+      siteName: "Comunidad FASTA",
+      locale: "es_AR",
+      url: `/e/${b.slug}`,
+      title: b.name,
+      description,
+      images: ogImage,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: b.name,
+      description,
+      images: b.photoFilename ? [`/api/image/${b.id}/orig`] : undefined,
+    },
   };
 }
 
@@ -114,7 +145,7 @@ export default async function FichaPage({
                 </Link>
               ) : null}
 
-              <h1 className="display-xl text-5xl md:text-6xl lg:text-7xl mb-6">
+              <h1 className="display-xl text-4xl sm:text-5xl md:text-6xl lg:text-7xl mb-6 break-words">
                 {b.name}
               </h1>
 
@@ -222,7 +253,7 @@ export default async function FichaPage({
             <p className="flex items-center gap-2 eyebrow mb-6">
               <BookOpen size={13} /> Su historia
             </p>
-            <h2 className="font-display text-4xl md:text-6xl tracking-[-0.035em] leading-[0.98] mb-10 md:mb-12">
+            <h2 className="font-display text-3xl sm:text-4xl md:text-6xl tracking-[-0.035em] leading-[1.02] md:leading-[0.98] mb-10 md:mb-12">
               Cómo empezó todo.
             </h2>
             <div className="text-[18px] md:text-[20px] leading-[1.7] text-[var(--color-ink-soft)] space-y-6 whitespace-pre-wrap font-light">

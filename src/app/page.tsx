@@ -109,7 +109,7 @@ export default async function HomePage() {
           </p>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-end">
             <div className="lg:col-span-7">
-              <h1 className="display-xl text-[44px] sm:text-[64px] md:text-[88px] lg:text-[104px] mb-8">
+              <h1 className="display-xl text-[36px] sm:text-[56px] md:text-[80px] lg:text-[104px] mb-8">
                 <span className="block">Lo que somos,</span>
                 <span className="block">lo que hacemos,</span>
                 <span className="block text-[var(--color-accent)]">
@@ -287,7 +287,7 @@ export default async function HomePage() {
                 <p className="inline-flex items-center gap-2 text-[11px] tracking-[0.18em] uppercase text-[var(--color-bg)]/55 mb-6 font-medium">
                   <BookOpen size={13} /> La historia
                 </p>
-                <h2 className="font-display text-4xl md:text-6xl tracking-[-0.035em] leading-[0.98] mb-8">
+                <h2 className="font-display text-3xl sm:text-4xl md:text-6xl tracking-[-0.035em] leading-[1.02] md:leading-[0.98] mb-8 break-words">
                   {story.name}
                 </h2>
                 <p className="text-lg md:text-xl leading-relaxed text-[var(--color-bg)]/80 mb-8 clamp-5">
@@ -341,7 +341,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
             <div className="lg:col-span-7">
               <p className="eyebrow mb-3">Sumarte</p>
-              <h2 className="font-display text-4xl md:text-6xl tracking-[-0.035em] leading-[0.98] mb-6">
+              <h2 className="font-display text-3xl sm:text-4xl md:text-6xl tracking-[-0.035em] leading-[1.02] md:leading-[0.98] mb-6">
                 ¿También tenés algo
                 <br />
                 <span className="text-[var(--color-accent)]">para ofrecer?</span>
