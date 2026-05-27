@@ -20,6 +20,8 @@ import { logEvent } from "@/lib/log";
 import { searchValidatedFamilies } from "@/actions/families";
 import { appUrl } from "@/lib/env";
 import { clientIp, rateLimit, retryMessage } from "@/lib/rate-limit";
+import { emailLocalPart } from "@/lib/text";
+import { FAMILY_ROLES } from "@/config/roles";
 
 const SubmitSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -29,7 +31,7 @@ const SubmitSchema = z.object({
   address: z.string().trim().max(200).optional().nullable(),
   ownerEmail: z.string().trim().toLowerCase().email(),
   ownerName: z.string().trim().min(2).max(120),
-  ownerRole: z.enum(["familia", "docente", "egresado", "otro"]).default("familia"),
+  ownerRole: z.enum(FAMILY_ROLES).default("familia"),
   ownerPhone: z.string().trim().max(40).optional().nullable(),
   whatsapp: z.string().trim().max(40).optional().nullable(),
   instagram: z.string().trim().max(60).optional().nullable(),
@@ -164,40 +166,30 @@ export async function submitBusiness(_prev: unknown, fd: FormData): Promise<Subm
   let reqs: Array<typeof validationRequests.$inferSelect>;
   try {
     const result = await db.transaction(async (tx) => {
-      // Upsert family por email: si ya existe (admin la cargó antes o
-      // suma un segundo emprendimiento), respeta los campos existentes
-      // y solo llena los vacíos. validated NO se toca acá; sigue siendo
-      // decisión del admin.
-      const [existingFamily] = await tx
-        .select()
-        .from(families)
-        .where(eq(families.email, parsed.data.ownerEmail))
-        .limit(1);
-
-      let ownerFamilyId: string;
-      if (existingFamily) {
-        ownerFamilyId = existingFamily.id;
-        const patch: Partial<typeof families.$inferInsert> = {};
-        if (!existingFamily.displayName) patch.displayName = parsed.data.ownerName;
-        if (!existingFamily.role) patch.role = parsed.data.ownerRole;
-        if (!existingFamily.phone && parsed.data.ownerPhone)
-          patch.phone = parsed.data.ownerPhone;
-        if (Object.keys(patch).length > 0) {
-          await tx.update(families).set(patch).where(eq(families.id, existingFamily.id));
-        }
-      } else {
-        const [createdFamily] = await tx
-          .insert(families)
-          .values({
-            email: parsed.data.ownerEmail,
-            displayName: parsed.data.ownerName,
-            role: parsed.data.ownerRole,
-            phone: parsed.data.ownerPhone ?? null,
-            validated: false,
-          })
-          .returning({ id: families.id });
-        ownerFamilyId = createdFamily.id;
-      }
+      // Upsert family por email en una sola query. Si ya existe, los
+      // campos llenos se conservan via COALESCE; validated/isSeed/notes
+      // no se tocan porque no están en EXCLUDED. Si no existía, queda
+      // validated=false: la decisión de habilitarla como validadora
+      // sigue siendo del admin.
+      const [upsertedFamily] = await tx
+        .insert(families)
+        .values({
+          email: parsed.data.ownerEmail,
+          displayName: parsed.data.ownerName,
+          role: parsed.data.ownerRole,
+          phone: parsed.data.ownerPhone ?? null,
+          validated: false,
+        })
+        .onConflictDoUpdate({
+          target: families.email,
+          set: {
+            displayName: sql`COALESCE(NULLIF(${families.displayName}, ''), EXCLUDED.display_name)`,
+            role: sql`COALESCE(${families.role}, EXCLUDED.role)`,
+            phone: sql`COALESCE(${families.phone}, EXCLUDED.phone)`,
+          },
+        })
+        .returning({ id: families.id });
+      const ownerFamilyId = upsertedFamily.id;
 
       const [insertedBiz] = await tx
         .insert(businesses)
@@ -414,8 +406,17 @@ export async function respondValidation(
     });
     const publicUrl = `${appUrl()}/e/${biz.slug}`;
     const editUrl = `${appUrl()}/editar/${editToken}`;
+    const ownerName = biz.ownerFamilyId
+      ? (
+          await db
+            .select({ displayName: families.displayName })
+            .from(families)
+            .where(eq(families.id, biz.ownerFamilyId))
+            .limit(1)
+        )[0]?.displayName ?? emailLocalPart(biz.ownerEmail)
+      : emailLocalPart(biz.ownerEmail);
     const msg = templates.applicantApproved({
-      applicantName: biz.ownerEmail.split("@")[0],
+      applicantName: ownerName,
       businessName: biz.name,
       publicUrl,
       editUrl,

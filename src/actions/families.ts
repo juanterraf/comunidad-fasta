@@ -7,11 +7,12 @@ import { db } from "@/db";
 import { families } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
 import { logEvent } from "@/lib/log";
+import { FAMILY_ROLES } from "@/config/roles";
 
 const Schema = z.object({
   email: z.string().trim().toLowerCase().email(),
   displayName: z.string().trim().min(1).max(120),
-  role: z.enum(["familia", "docente", "egresado", "otro"]),
+  role: z.enum(FAMILY_ROLES),
   phone: z.string().trim().max(40).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
   isSeed: z.coerce.boolean().optional(),

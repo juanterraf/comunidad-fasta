@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { submitBusiness, searchValidators } from "@/actions/validation";
 import { MapPicker } from "@/components/map/MapPickerLoader";
+import { FAMILY_ROLE_OPTIONS } from "@/config/roles";
 import type { Category } from "@/db/schema";
 
 type V = { id: string; displayName: string; email: string };
@@ -133,10 +134,11 @@ export function SubmitForm({ categories }: { categories: Category[] }) {
           </Field>
           <Field label="Tu rol en la comunidad">
             <Select name="ownerRole" defaultValue="familia">
-              <option value="familia">Familia</option>
-              <option value="docente">Docente</option>
-              <option value="egresado">Egresado</option>
-              <option value="otro">Otro</option>
+              {FAMILY_ROLE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </Select>
           </Field>
         </div>

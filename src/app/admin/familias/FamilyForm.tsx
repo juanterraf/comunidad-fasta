@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { FAMILY_ROLE_OPTIONS } from "@/config/roles";
 import type { Family } from "@/db/schema";
 
 type Props = {
@@ -45,10 +46,11 @@ export function FamilyForm({ family, action, deleteAction }: Props) {
       </Field>
       <Field label="Rol">
         <Select name="role" defaultValue={family?.role ?? "familia"}>
-          <option value="familia">Familia</option>
-          <option value="docente">Docente</option>
-          <option value="egresado">Egresado/a</option>
-          <option value="otro">Otro</option>
+          {FAMILY_ROLE_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
         </Select>
       </Field>
       <Field label="Teléfono">

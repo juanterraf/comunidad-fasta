@@ -181,7 +181,7 @@ export async function updateOwnBusiness(_prev: unknown, fd: FormData) {
     .filter(Boolean)
     .slice(0, 5);
 
-  await db
+  const [updated] = await db
     .update(businesses)
     .set({
       description: parsed.data.description,
@@ -195,7 +195,8 @@ export async function updateOwnBusiness(_prev: unknown, fd: FormData) {
       byAppointment: parsed.data.byAppointment ?? false,
       tags,
     })
-    .where(eq(businesses.id, session.businessId));
+    .where(eq(businesses.id, session.businessId))
+    .returning({ slug: businesses.slug });
 
   await logEvent({
     type: "business.self_updated",
@@ -203,11 +204,6 @@ export async function updateOwnBusiness(_prev: unknown, fd: FormData) {
     entityType: "businesses",
     entityId: session.businessId,
   });
-  const [updated] = await db
-    .select({ slug: businesses.slug })
-    .from(businesses)
-    .where(eq(businesses.id, session.businessId))
-    .limit(1);
   if (updated?.slug) revalidatePath(`/e/${updated.slug}`);
   revalidatePath("/mi-emprendimiento");
   return { ok: true as const };

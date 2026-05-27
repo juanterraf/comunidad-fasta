@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { businesses, families } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
 import { Input } from "@/components/ui/Input";
+import { FamilyStatusBadge } from "@/components/ui/FamilyStatusBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -89,17 +90,7 @@ export default async function FamiliasPage({
                   {f.businessCount}
                 </td>
                 <td className="px-3 py-2">
-                  {f.isSeed ? (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-ink)] text-[var(--color-bg)]">
-                      semilla
-                    </span>
-                  ) : f.validated ? (
-                    <span className="text-xs px-2 py-0.5 rounded-full border border-[var(--color-border)]">
-                      validada
-                    </span>
-                  ) : (
-                    <span className="text-xs text-[var(--color-muted)]">pending</span>
-                  )}
+                  <FamilyStatusBadge isSeed={f.isSeed} validated={f.validated} />
                 </td>
                 <td className="px-3 py-2 text-right">
                   <Link

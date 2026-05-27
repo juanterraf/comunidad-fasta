@@ -10,15 +10,10 @@ import {
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
 import { BusinessAdminForm } from "./BusinessAdminForm";
+import { FamilyStatusBadge } from "@/components/ui/FamilyStatusBadge";
+import { FAMILY_ROLE_LABEL, type FamilyRole } from "@/config/roles";
 
 export const dynamic = "force-dynamic";
-
-const ROLE_LABEL: Record<string, string> = {
-  familia: "Familia",
-  docente: "Docente",
-  egresado: "Egresado",
-  otro: "Otro",
-};
 
 export default async function EmprendimientoAdminPage({
   params,
@@ -29,25 +24,27 @@ export default async function EmprendimientoAdminPage({
   const { id } = await params;
   const [b] = await db.select().from(businesses).where(eq(businesses.id, id)).limit(1);
   if (!b) notFound();
-  const cats = await db.select().from(categories).orderBy(asc(categories.displayOrder));
 
-  const [owner] = b.ownerFamilyId
-    ? await db.select().from(families).where(eq(families.id, b.ownerFamilyId)).limit(1)
-    : [];
-
-  const validators = await db
-    .select({
-      id: validationRequests.id,
-      status: validationRequests.status,
-      createdAt: validationRequests.createdAt,
-      respondedAt: validationRequests.respondedAt,
-      expiresAt: validationRequests.expiresAt,
-      validatorName: families.displayName,
-      validatorEmail: families.email,
-    })
-    .from(validationRequests)
-    .leftJoin(families, eq(validationRequests.validatorFamilyId, families.id))
-    .where(eq(validationRequests.businessId, id));
+  const [cats, ownerRows, validators] = await Promise.all([
+    db.select().from(categories).orderBy(asc(categories.displayOrder)),
+    b.ownerFamilyId
+      ? db.select().from(families).where(eq(families.id, b.ownerFamilyId)).limit(1)
+      : Promise.resolve([] as Array<typeof families.$inferSelect>),
+    db
+      .select({
+        id: validationRequests.id,
+        status: validationRequests.status,
+        createdAt: validationRequests.createdAt,
+        respondedAt: validationRequests.respondedAt,
+        expiresAt: validationRequests.expiresAt,
+        validatorName: families.displayName,
+        validatorEmail: families.email,
+      })
+      .from(validationRequests)
+      .leftJoin(families, eq(validationRequests.validatorFamilyId, families.id))
+      .where(eq(validationRequests.businessId, id)),
+  ]);
+  const owner = ownerRows[0];
 
   return (
     <div className="max-w-3xl">
@@ -71,7 +68,11 @@ export default async function EmprendimientoAdminPage({
             </div>
             <div>
               <p className="text-xs uppercase text-[var(--color-muted)] mb-0.5">Rol</p>
-              <p>{ROLE_LABEL[owner.role ?? ""] ?? owner.role ?? "—"}</p>
+              <p>
+                {owner.role && owner.role in FAMILY_ROLE_LABEL
+                  ? FAMILY_ROLE_LABEL[owner.role as FamilyRole]
+                  : owner.role ?? "—"}
+              </p>
             </div>
             <div>
               <p className="text-xs uppercase text-[var(--color-muted)] mb-0.5">Mail</p>
@@ -84,22 +85,7 @@ export default async function EmprendimientoAdminPage({
               <p>{owner.phone ?? "—"}</p>
             </div>
             <div className="md:col-span-2 flex items-center justify-between gap-3 pt-3 border-t border-[var(--color-border)] mt-1">
-              <div className="flex items-center gap-2">
-                {owner.isSeed ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-ink)] text-[var(--color-bg)]">
-                    semilla
-                  </span>
-                ) : null}
-                {owner.validated ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full border border-[var(--color-ink)] text-[var(--color-ink)]">
-                    validada · puede validar a otros
-                  </span>
-                ) : (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-white border border-[var(--color-border)] text-[var(--color-muted)]">
-                    no validada
-                  </span>
-                )}
-              </div>
+              <FamilyStatusBadge isSeed={owner.isSeed} validated={owner.validated} />
               <Link
                 href={`/admin/familias/${owner.id}`}
                 className="text-xs underline text-[var(--color-muted)]"

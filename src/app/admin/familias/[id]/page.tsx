@@ -16,21 +16,24 @@ export default async function EditarFamiliaPage({
 }) {
   await requireAdmin();
   const { id } = await params;
-  const [row] = await db.select().from(families).where(eq(families.id, id)).limit(1);
-  if (!row) notFound();
 
-  const ownedBusinesses = await db
-    .select({
-      id: businesses.id,
-      name: businesses.name,
-      slug: businesses.slug,
-      status: businesses.status,
-      categoryName: categories.name,
-    })
-    .from(businesses)
-    .leftJoin(categories, eq(businesses.categoryId, categories.id))
-    .where(eq(businesses.ownerFamilyId, id))
-    .orderBy(asc(businesses.name));
+  const [familyRows, ownedBusinesses] = await Promise.all([
+    db.select().from(families).where(eq(families.id, id)).limit(1),
+    db
+      .select({
+        id: businesses.id,
+        name: businesses.name,
+        slug: businesses.slug,
+        status: businesses.status,
+        categoryName: categories.name,
+      })
+      .from(businesses)
+      .leftJoin(categories, eq(businesses.categoryId, categories.id))
+      .where(eq(businesses.ownerFamilyId, id))
+      .orderBy(asc(businesses.name)),
+  ]);
+  const row = familyRows[0];
+  if (!row) notFound();
 
   return (
     <div>

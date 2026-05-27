@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MapPin, Truck, Wifi, CalendarCheck, BookOpen } from "lucide-react";
 import { db } from "@/db";
@@ -14,7 +15,7 @@ import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-async function getBusinessBySlug(slug: string) {
+const getBusinessBySlug = cache(async function getBusinessBySlug(slug: string) {
   const rows = await db
     .select({
       id: businesses.id,
@@ -42,7 +43,7 @@ async function getBusinessBySlug(slug: string) {
     .where(and(eq(businesses.slug, slug), eq(businesses.status, "active")))
     .limit(1);
   return rows[0] ?? null;
-}
+});
 
 export async function generateMetadata({
   params,

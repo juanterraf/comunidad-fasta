@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { consumeEditToken, inspectEditToken } from "@/actions/owner";
+import { ErrorShell } from "@/components/ui/ErrorShell";
 
 export const dynamic = "force-dynamic";
+
+const INVALID_TITLES: Record<"used" | "expired" | "not_found", string> = {
+  used: "Este link ya se usó.",
+  expired: "Este link expiró.",
+  not_found: "Link inválido.",
+};
 
 export default async function ConsumeEditTokenPage({
   params,
@@ -13,36 +20,32 @@ export default async function ConsumeEditTokenPage({
   const preview = await inspectEditToken(token);
 
   if (preview.status !== "valid") {
-    const title =
-      preview.status === "used"
-        ? "Este link ya se usó."
-        : preview.status === "expired"
-          ? "Este link expiró."
-          : "Link inválido.";
     return (
-      <section className="max-w-md mx-auto px-5 pt-20 md:pt-28 pb-16 text-center">
-        <p className="editorial-rule inline-flex mb-6">Link inválido</p>
-        <h1 className="font-display text-3xl md:text-4xl tracking-[-0.025em] mb-4">
-          {title}
-        </h1>
-        <p className="text-[var(--color-muted)] leading-relaxed mb-8">
-          Pedí uno nuevo desde{" "}
+      <ErrorShell
+        eyebrow="Link inválido"
+        title={INVALID_TITLES[preview.status]}
+        body={
+          <>
+            Pedí uno nuevo desde{" "}
+            <Link
+              className="underline hover:text-[var(--color-ink)]"
+              href="/editar"
+            >
+              /editar
+            </Link>
+            .
+          </>
+        }
+        actions={
           <Link
-            className="underline hover:text-[var(--color-ink)]"
             href="/editar"
+            className="inline-flex items-center gap-2 h-12 px-6 bg-[var(--color-ink)] text-[var(--color-bg)] text-[15px] font-medium hover:bg-[var(--color-accent)] transition-colors"
           >
-            /editar
+            Pedir un link nuevo
+            <ArrowRight size={17} />
           </Link>
-          .
-        </p>
-        <Link
-          href="/editar"
-          className="inline-flex items-center gap-2 h-11 px-5 bg-[var(--color-ink)] text-[var(--color-bg)] text-sm font-medium hover:bg-[var(--color-accent)] transition-colors"
-        >
-          Pedir un link nuevo
-          <ArrowRight size={15} />
-        </Link>
-      </section>
+        }
+      />
     );
   }
 

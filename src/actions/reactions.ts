@@ -30,24 +30,28 @@ export async function getReactions(
   businessId: string,
   anonId: string | null,
 ): Promise<ReactionState> {
-  const counts = emptyCounts();
-  const rows = await db
+  const countsQuery = db
     .select({ kind: reactions.kind, count: sql<number>`count(*)::int` })
     .from(reactions)
     .where(eq(reactions.businessId, businessId))
     .groupBy(reactions.kind);
+
+  const mineQuery = anonId
+    ? db
+        .select({ kind: reactions.kind })
+        .from(reactions)
+        .where(and(eq(reactions.businessId, businessId), eq(reactions.anonId, anonId)))
+    : Promise.resolve([] as Array<{ kind: string }>);
+
+  const [rows, mineRows] = await Promise.all([countsQuery, mineQuery]);
+
+  const counts = emptyCounts();
   for (const r of rows) {
     if (isReactionKind(r.kind)) counts[r.kind] = r.count;
   }
   const mine: Partial<Record<ReactionKind, boolean>> = {};
-  if (anonId) {
-    const mineRows = await db
-      .select({ kind: reactions.kind })
-      .from(reactions)
-      .where(and(eq(reactions.businessId, businessId), eq(reactions.anonId, anonId)));
-    for (const r of mineRows) {
-      if (isReactionKind(r.kind)) mine[r.kind] = true;
-    }
+  for (const r of mineRows) {
+    if (isReactionKind(r.kind)) mine[r.kind] = true;
   }
   return { counts, mine };
 }
