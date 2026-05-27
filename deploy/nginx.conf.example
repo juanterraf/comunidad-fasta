@@ -33,7 +33,17 @@ server {
     add_header Referrer-Policy "same-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Robots-Tag "noindex, nofollow" always;
+
+    # NO setear X-Robots-Tag: noindex en el header HTTP. Aunque queremos
+    # noindex para buscadores, los crawlers de Facebook/WhatsApp/Twitter
+    # también respetan este header y abortan la generación de preview
+    # ANTES de leer el HTML. Resultado: links compartidos en redes
+    # aparecen sin título ni imagen.
+    # El noindex queda cubierto por:
+    #   - src/app/layout.tsx: robots: { index: false, follow: false }
+    #     (emite <meta name="robots" content="noindex, nofollow">)
+    #   - src/app/robots.ts: Disallow: / para *, Allow: / para los
+    #     bots de social media.
 
     location / {
         proxy_pass http://127.0.0.1:3000;
