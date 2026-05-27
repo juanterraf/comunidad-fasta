@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { asc, ilike, or, sql } from "drizzle-orm";
+import { asc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { families } from "@/db/schema";
+import { businesses, families } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-guard";
 import { Input } from "@/components/ui/Input";
 
@@ -25,9 +25,19 @@ export default async function FamiliasPage({
 
   const [rows, totalRow] = await Promise.all([
     db
-      .select()
+      .select({
+        id: families.id,
+        email: families.email,
+        displayName: families.displayName,
+        role: families.role,
+        isSeed: families.isSeed,
+        validated: families.validated,
+        businessCount: sql<number>`count(${businesses.id})::int`,
+      })
       .from(families)
+      .leftJoin(businesses, eq(businesses.ownerFamilyId, families.id))
       .where(where)
+      .groupBy(families.id)
       .orderBy(asc(families.displayName))
       .limit(PAGE_SIZE)
       .offset((page - 1) * PAGE_SIZE),
@@ -64,6 +74,7 @@ export default async function FamiliasPage({
               <th className="text-left px-3 py-2 font-medium">Nombre</th>
               <th className="text-left px-3 py-2 font-medium">Mail</th>
               <th className="text-left px-3 py-2 font-medium">Rol</th>
+              <th className="text-left px-3 py-2 font-medium">Emp.</th>
               <th className="text-left px-3 py-2 font-medium">Estado</th>
               <th className="px-3 py-2"></th>
             </tr>
@@ -74,6 +85,9 @@ export default async function FamiliasPage({
                 <td className="px-3 py-2">{f.displayName}</td>
                 <td className="px-3 py-2 text-[var(--color-muted)]">{f.email}</td>
                 <td className="px-3 py-2">{f.role}</td>
+                <td className="px-3 py-2 tabular-nums text-[var(--color-muted)]">
+                  {f.businessCount}
+                </td>
                 <td className="px-3 py-2">
                   {f.isSeed ? (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-ink)] text-[var(--color-bg)]">
@@ -99,7 +113,7 @@ export default async function FamiliasPage({
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-[var(--color-muted)]">
+                <td colSpan={6} className="px-3 py-6 text-center text-[var(--color-muted)]">
                   No hay familias con esa búsqueda.
                 </td>
               </tr>

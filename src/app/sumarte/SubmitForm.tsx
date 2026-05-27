@@ -120,11 +120,28 @@ export function SubmitForm({ categories }: { categories: Category[] }) {
 
       <fieldset className="border border-[var(--color-border)] rounded-md p-4 space-y-3">
         <legend className="text-sm font-medium px-1">Tus datos</legend>
+        <p className="text-xs text-[var(--color-muted)]">
+          Esto identifica de quién es el emprendimiento. Si la administración
+          ya te conocía, respetamos los datos que tenga cargados.
+        </p>
         <Field label="Tu nombre o el de tu familia">
           <Input name="ownerName" required maxLength={120} />
         </Field>
-        <Field label="Tu mail">
-          <Input name="ownerEmail" type="email" required />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Field label="Tu mail">
+            <Input name="ownerEmail" type="email" required />
+          </Field>
+          <Field label="Tu rol en la comunidad">
+            <Select name="ownerRole" defaultValue="familia">
+              <option value="familia">Familia</option>
+              <option value="docente">Docente</option>
+              <option value="egresado">Egresado</option>
+              <option value="otro">Otro</option>
+            </Select>
+          </Field>
+        </div>
+        <Field label="Teléfono (opcional, solo lo ve la administración)">
+          <Input name="ownerPhone" type="tel" maxLength={40} />
         </Field>
       </fieldset>
 

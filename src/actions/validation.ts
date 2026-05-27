@@ -29,6 +29,8 @@ const SubmitSchema = z.object({
   address: z.string().trim().max(200).optional().nullable(),
   ownerEmail: z.string().trim().toLowerCase().email(),
   ownerName: z.string().trim().min(2).max(120),
+  ownerRole: z.enum(["familia", "docente", "egresado", "otro"]).default("familia"),
+  ownerPhone: z.string().trim().max(40).optional().nullable(),
   whatsapp: z.string().trim().max(40).optional().nullable(),
   instagram: z.string().trim().max(60).optional().nullable(),
   website: z.string().trim().max(300).optional().nullable(),
@@ -85,6 +87,8 @@ export async function submitBusiness(_prev: unknown, fd: FormData): Promise<Subm
     address: fd.get("address") || null,
     ownerEmail: fd.get("ownerEmail"),
     ownerName: fd.get("ownerName"),
+    ownerRole: (fd.get("ownerRole") as string) || "familia",
+    ownerPhone: fd.get("ownerPhone") || null,
     whatsapp: fd.get("whatsapp") || null,
     instagram: fd.get("instagram") || null,
     website: fd.get("website") || null,
@@ -160,6 +164,41 @@ export async function submitBusiness(_prev: unknown, fd: FormData): Promise<Subm
   let reqs: Array<typeof validationRequests.$inferSelect>;
   try {
     const result = await db.transaction(async (tx) => {
+      // Upsert family por email: si ya existe (admin la cargó antes o
+      // suma un segundo emprendimiento), respeta los campos existentes
+      // y solo llena los vacíos. validated NO se toca acá; sigue siendo
+      // decisión del admin.
+      const [existingFamily] = await tx
+        .select()
+        .from(families)
+        .where(eq(families.email, parsed.data.ownerEmail))
+        .limit(1);
+
+      let ownerFamilyId: string;
+      if (existingFamily) {
+        ownerFamilyId = existingFamily.id;
+        const patch: Partial<typeof families.$inferInsert> = {};
+        if (!existingFamily.displayName) patch.displayName = parsed.data.ownerName;
+        if (!existingFamily.role) patch.role = parsed.data.ownerRole;
+        if (!existingFamily.phone && parsed.data.ownerPhone)
+          patch.phone = parsed.data.ownerPhone;
+        if (Object.keys(patch).length > 0) {
+          await tx.update(families).set(patch).where(eq(families.id, existingFamily.id));
+        }
+      } else {
+        const [createdFamily] = await tx
+          .insert(families)
+          .values({
+            email: parsed.data.ownerEmail,
+            displayName: parsed.data.ownerName,
+            role: parsed.data.ownerRole,
+            phone: parsed.data.ownerPhone ?? null,
+            validated: false,
+          })
+          .returning({ id: families.id });
+        ownerFamilyId = createdFamily.id;
+      }
+
       const [insertedBiz] = await tx
         .insert(businesses)
         .values({
@@ -171,6 +210,7 @@ export async function submitBusiness(_prev: unknown, fd: FormData): Promise<Subm
           neighborhood: parsed.data.neighborhood,
           categoryId: parsed.data.categoryId,
           ownerEmail: parsed.data.ownerEmail,
+          ownerFamilyId,
           whatsapp: parsed.data.whatsapp,
           instagram: parsed.data.instagram,
           website: parsed.data.website,

@@ -11,6 +11,7 @@
     "audit": "pnpm audit --prod",
     "fonts:copy": "tsx --tsconfig tsconfig.json scripts/copy-fonts.ts",
     "cleanup:images": "tsx --tsconfig tsconfig.json scripts/cleanup-images.ts",
+    "backfill:owner-family": "tsx --tsconfig tsconfig.json scripts/backfill-owner-family.ts",
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:generate": "drizzle-kit generate",
